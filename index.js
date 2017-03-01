@@ -6,12 +6,14 @@ let moment = require('moment')
 let lowDb = require('lowdb')
 let lowDbStorage = require('lowdb/lib/storages/file-sync')
 let sleep = require('system-sleep')
-let Promise = require('q')
+let Q = require('q')
 
 let slackWebHook = process.env.LABS_SLACK_WEBHOOK_URL_DEVPARANA_BOT_PR || ''
 let dbFile = path.join(__dirname, 'data/db.json')
 
 try {
+  _log('Searching for new job offers...')
+
   if (!fs.existsSync(path.dirname(dbFile)) && !fs.mkdirsSync(path.dirname(dbFile))) {
     throw new Error('Error creating data dir.')
   } else if (!slackWebHook) {
@@ -21,7 +23,7 @@ try {
   let db = lowDb(dbFile, { storage: lowDbStorage })
   let github = new GitHubApi({})
   let slack = new Slack()
-  let deferred = Promise.defer()
+  let deferred = Q.defer()
   slack.setWebhook(slackWebHook)
 
   db.defaults({ jobs: [], settings: {} }).write()
@@ -48,14 +50,15 @@ try {
       db.get('jobs').push(row).write()
       sleep(100)
     })
+    sleep(500)
 
-    deferred.resolve()
-  })
-
-  Promise.when(deferred).then(() => {
     let jobs = db.get('jobs').value().filter(item => !item.botProcessed)
       .filter((item, index, self) => index === self.findIndex(_item => item.id === _item.id))
 
+    deferred.resolve(jobs)
+  })
+
+  Q.when(deferred.promise, (jobs) => {
     _log(`Found ${jobs.length} job offers.`)
     if (jobs.length) {
       _log('Processing items to send to slack...')
