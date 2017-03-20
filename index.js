@@ -66,11 +66,14 @@ try {
 
     jobs.forEach((item, index) => {
       _log('Processing item ' + (index + 1))
+
+      let date = moment.unix(item.date).format('DD/MM/YYYY')
+
       slack.webhook({
         attachments: [{
           title: item.title,
           title_link: item.url,
-          text: 'Vaga: ' + item.title + '\nData: ' + moment(item.date).format('DD/MM/YYYY') + '\nDetalhes: ' + item.labels.join(', '),
+          text: 'Vaga: ' + item.title + '\nData: ' + date + '\nDetalhes: ' + item.labels.join(', '),
           color: '#7CD197'
         }],
         text: 'Vaga de trabalho encontrada. Confira! \n\n' + item.url
